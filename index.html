@@ -9,6 +9,17 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Safari (notably iPadOS) auto-boosts text size independently of any
+     page-level zoom/scale, specifically for readability — this fights
+     against the popup auto-scale system (fixed-width text blocks sized
+     for a specific font-size start wrapping once Safari inflates the
+     text beyond what the scaled-down container expects). Disabling it
+     is the standard fix; -webkit- prefix still needed for older Safari. */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   html, body {
     width: 100%; height: 100%;
     overflow: clip;
@@ -8883,12 +8894,31 @@
     #eye-cursor,
     #chat-cursor,
     #arrow-cursor,
+    #flip-cursor,
     .nav-zone {
       display: none !important;
     }
     * {
       cursor: auto !important;
     }
+  }
+  /* Same rule again, but keyed off body.is-touch (set in JS from the same
+     hover:none/pointer:coarse check) rather than the media query directly —
+     a landscape iPad matches the DESKTOP layout breakpoint (not portrait),
+     so without this it would otherwise get the full custom-cursor UI meant
+     for an actual mouse. Redundant with the @media block above by design:
+     two independent paths to the same "no cursor on touch" result. */
+  body.is-touch #cursor,
+  body.is-touch #cursor-ring,
+  body.is-touch #eye-cursor,
+  body.is-touch #chat-cursor,
+  body.is-touch #arrow-cursor,
+  body.is-touch #flip-cursor,
+  body.is-touch .nav-zone {
+    display: none !important;
+  }
+  body.is-touch * {
+    cursor: auto !important;
   }
 
   /* ── Mobile card-1 adaptive ──────────────── */
@@ -11733,6 +11763,20 @@
   </div>
 </div><script>
 document.addEventListener('DOMContentLoaded', () => {
+  // ── Touch detection (independent of viewport width) ──────
+  // The CSS media query (hover:none)/(pointer:coarse) already hides the
+  // custom cursor visuals regardless of layout mode, but that's CSS-only —
+  // mouse-driven JS (parallax, hover-state tracking, cursor positioning)
+  // keeps running underneath even when there's no real pointer to drive
+  // it. On a touch device in desktop layout (iPad landscape doesn't match
+  // the mobile orientation:portrait switch, but still has no mouse) that
+  // leftover logic can leave things in a stuck/inconsistent visual state.
+  // This flags touch explicitly so JS can check it directly instead of
+  // relying only on the CSS side effect.
+  const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  document.body.classList.toggle('is-touch', IS_TOUCH);
+  window._isTouch = IS_TOUCH;
+
   // ── Auto-scale ─────────────────────────
   const CARD_W = 1328, CARD_H = 1066;
   const scene = document.getElementById('scene');
@@ -13990,6 +14034,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('load', cacheDims);
 
   document.addEventListener('mousemove', e => {
+    if (IS_TOUCH) return; // no real pointer driving this on a touch device — see IS_TOUCH note above
     const nx = (e.clientX / window.innerWidth  - 0.5) * 2;
     const ny = (e.clientY / window.innerHeight - 0.5) * 2;
     tRY =  nx * MAX_ROT;
