@@ -111,6 +111,15 @@
     height: 1440px;
     flex-shrink: 0;
     transform-origin: center center;
+    /* #m-canvas gets its own scale() transform via JS (to fit the fixed
+       720x1440 design to the real viewport) — without preserve-3d here,
+       that transform flattens the NESTED flip card's own preserve-3d
+       at this level, even though the flip card declares it correctly on
+       itself. Every ancestor in a 3D transform chain needs this, not
+       just the element doing the rotating — likely why both faces of
+       the flip were showing simultaneously instead of one hiding via
+       backface-visibility. */
+    transform-style: preserve-3d;
   }
   .m-card {
     position: absolute;
@@ -1014,6 +1023,7 @@
     clip-path: none;
     perspective: 2600px;
     -webkit-perspective: 2600px;
+    transform-style: preserve-3d;
     /* the base .m-card gradient is a plain rectangle, but the visible shape
        is defined by the front/back faces' own rounded clipping — with no
        clip-path on this wrapper anymore, that mismatched rectangle was
@@ -2442,6 +2452,8 @@
     width: 64px;
     height: 64px;
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
+    background-clip: padding-box;
+    overflow: hidden;
     border: 2px solid rgba(255,255,255,0.08);
     border-radius: 50%;
     padding: 0;
@@ -2974,6 +2986,18 @@
   .card-item.animating {
     transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1),
                 opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Touch's slide-carousel keeps one duration/easing throughout instead —
+     .animating's normally-longer 1.1s (vs the base .card-item's 0.75s)
+     gets removed right as the card settles into place (onForwardDone/
+     onBackwardDone strip the class right when transitionend fires), and
+     a transition-duration change landing at that exact moment is a
+     known source of a visible sub-pixel "settle" snap in some browsers.
+     Best-guess fix, not confirmed on a real device — if it doesn't
+     help, this narrows down what it wasn't. */
+  body.is-touch .card-item.animating {
+    transition: transform 0.75s cubic-bezier(0.76, 0, 0.24, 1),
+                opacity   0.75s cubic-bezier(0.76, 0, 0.24, 1) !important;
   }
 
   .card-arrow:hover {
@@ -3611,6 +3635,36 @@
   #preloader-mobile.fade-out {
     opacity: 0;
     pointer-events: none;
+  }
+
+  #phone-landscape-notice {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 32px;
+    text-align: center;
+  }
+  #phone-landscape-notice span {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 140%;
+    color: #FFF;
+    max-width: 360px;
+  }
+  /* Phones are short even in landscape (~375-430px tall) — iPads stay
+     tall (768px+) regardless of orientation, so this only ever catches
+     an actual phone turned sideways, never a landscape iPad (which has
+     its own, working desktop-layout experience). */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #phone-landscape-notice { display: flex; }
+    #main-content, #preloader, #preloader-mobile, #mobile-scene { display: none !important; }
   }
 
   .scale-wrap {
@@ -4719,6 +4773,8 @@
     border-radius: 100px;
     border: 2px solid rgba(255,255,255,0.08);
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
+    background-clip: padding-box;
+    overflow: hidden;
     color: #fff;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 18px;
@@ -5149,6 +5205,8 @@
     width: 56px; height: 56px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
+    background-clip: padding-box;
+    overflow: hidden;
     border: 2px solid rgba(255,255,255,0.08);
     padding: 0; cursor: none; z-index: 2;
     transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), border-color 0.3s ease;
@@ -5721,12 +5779,13 @@
   #case-popup-11-wrap .case-04-phase-row { align-items: center; }
   /* backdrop behind the BORSH popup: same hue, a couple of tones darker,
      instead of the generic near-black overlay used everywhere else */
-  #case-overlay:has(#case-popup-11-wrap.active) { background: #194837; }
+  #case-overlay:has(#case-popup-11-wrap.active) { background: #102E23; }
   /* the close button is a single page-level element and actually sits BEFORE
      #case-overlay in the markup (not inside it), so the check has to run from
      a common ancestor (body) rather than from #case-overlay itself */
   body:has(#case-popup-11-wrap.active) #case-close {
     background: linear-gradient(180deg, #123D30 0%, #1B4E3D 100%);
+    background-clip: padding-box;
     border-color: rgba(255,255,255,0.10);
   }
   body:has(#case-popup-11-wrap.active) #case-close:hover {
@@ -5736,6 +5795,7 @@
      selector is enough */
   #case-popup-11-wrap .case-back-btn {
     background: linear-gradient(180deg, #123D30 0%, #1B4E3D 100%);
+    background-clip: padding-box;
     border-color: rgba(255,255,255,0.10);
   }
   #case-popup-11-wrap .case-back-btn:hover {
@@ -7145,6 +7205,8 @@
     z-index: 51002;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease, border-color 0.3s ease;
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
+    background-clip: padding-box;
+    overflow: hidden;
     border: 2px solid rgba(255,255,255,0.08);
     padding: 0;
     opacity: 0;
@@ -7445,15 +7507,22 @@
   @media (max-width: 1400px) {
     #home-btn,
     #grid-btn {
-      width: 64px;
-      height: 64px;
+      width: 50px;
+      height: 50px;
       justify-content: center;
       gap: 0;
       background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%) !important;
+      background-clip: padding-box !important;
+      overflow: hidden !important;
       border: 2px solid rgba(255,255,255,0.08) !important;
       border-radius: 50%;
       padding: 0 !important;
       transition: opacity 0.4s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease;
+    }
+    #home-btn svg,
+    #grid-btn svg {
+      width: 22px !important;
+      height: 22px !important;
     }
     #home-btn:hover,
     #grid-btn:hover {
@@ -7778,6 +7847,8 @@
         justify-content: center !important;
         border-radius: 50% !important;
         background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%) !important;
+        background-clip: padding-box !important;
+        overflow: hidden !important;
       }
       #grid-close-label {
         display: none !important;
@@ -9048,6 +9119,11 @@
     #case-popup-11-wrap .case-back-btn {
       margin-top: -150px !important;
     }
+    /* Desktop got darkened by 2 tones per request — restored to the
+       original color here since that was explicitly desktop-only. */
+    #case-overlay:has(#case-popup-11-wrap.active) {
+      background: #194837 !important;
+    }
     /* Cell/frame placeholder background was a noticeably different dark
        green (#0B2E24) than the popup's own backdrop (#0E4837) — visible
        as a seam wherever it peeks through gaps or edges. Match it. */
@@ -9145,6 +9221,25 @@
   body.is-touch #nav-stack:hover #nav-pause {
     width: 46px !important;
     height: 46px !important;
+  }
+  /* Switched the ring itself from 4-sided inset auto-sizing to explicit
+     fixed dimensions + margin-based centering on touch — same technique
+     already used reliably elsewhere in this file (#arrow-cursor etc).
+     The inset approach depends on the browser correctly resolving
+     width/height from 4 simultaneous constraints; this removes that
+     dependency entirely rather than continuing to guess at why it
+     wasn't rendering concentric with the button. #nav-pause is pinned
+     to 46px on touch (rule above), so the ring's fixed 56px (46+5+5)
+     size is exact, not a guess. */
+  body.is-touch #np-ring {
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 56px !important;
+    height: 56px !important;
+    margin-left: -28px !important;
+    margin-top: -28px !important;
   }
   /* The cascade reveal animations (.case-reveal / -number / -img) blur
      from 10-20px down to 0 while sliding/scaling in — filter:blur()
@@ -9582,6 +9677,22 @@
         <div class="pm-progress-fill"></div>
       </div>
     </div>
+  </div>
+
+  <!-- Phone-landscape notice — the site's mobile layout is portrait-only;
+       a phone rotated to landscape currently falls through to the
+       desktop layout (same as iPad landscape), but at phone width/height
+       that's unusable. iPad landscape is excluded via the height check
+       below — phones are short in landscape (~375-430px tall), iPads are
+       tall even in landscape (768px+), so max-height reliably tells them
+       apart without needing a device-specific check. Shown/hidden purely
+       via CSS media query — no JS involved. -->
+  <div id="phone-landscape-notice">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path opacity="0.4" d="M21.0029 15.976C20.5607 16.5708 19.8627 17.2745 19.0704 18.0707C18.2743 18.863 17.5708 19.5608 16.9759 20.003C16.3391 20.4764 15.688 20.7769 14.9076 20.7482C14.1377 20.7198 13.4858 20.3797 12.8338 19.8749C12.2034 19.3868 11.4912 18.678 10.6088 17.7998L7.216 14.4233C6.33362 13.5452 5.62134 12.8364 5.13082 12.2089C4.62365 11.5602 4.28055 10.9099 4.25192 10.1406C4.22288 9.36046 4.5263 8.71063 5.00204 8.07688C5.45359 7.47535 6.15479 6.77756 6.9681 5.9682C7.77745 5.1549 8.47529 4.45365 9.07682 4.0021C9.71057 3.52636 10.3604 3.22294 11.1406 3.25198C11.9099 3.28061 12.5602 3.62371 13.2089 4.13088C13.2919 4.19579 13.2927 4.32009 13.2162 4.39256C12.7983 4.78842 12.475 5.27531 12.2678 5.81135C12.0965 6.25444 12.0433 6.67885 12.0207 7.03454C11.9999 7.36014 12 7.74167 12 8.13373V8.24139C12 8.63344 11.9999 9.01498 12.0207 9.34058C12.0433 9.69627 12.0965 10.1207 12.2678 10.5638C12.6256 11.4894 13.3296 12.2685 14.269 12.6854C14.727 12.8886 15.1665 12.9509 15.5216 12.9769C15.8394 13.0001 16.2074 13.0001 16.567 13.0001H18.4329C18.7926 13.0001 19.1606 13.0001 19.4783 12.9769C19.8334 12.9509 20.273 12.8886 20.731 12.6854C21.0132 12.5601 21.1543 12.4975 21.2672 12.5378C21.2752 12.5406 21.2831 12.5438 21.2908 12.5473C21.3999 12.597 21.4455 12.7101 21.5367 12.9364C21.6606 13.2436 21.7354 13.5639 21.7481 13.9076C21.7769 14.6881 21.4764 15.3392 21.0029 15.976Z" fill="#FF6108"/>
+      <path d="M2.96879 12.251C3.3825 12.234 3.7318 12.5552 3.74906 12.9688C3.80341 14.2905 4.26462 16.2701 5.44632 17.9571C6.44117 19.3773 7.95275 20.6023 10.2178 21.0655L9.89066 20.7481C9.5939 20.4593 9.58727 19.9844 9.87601 19.6876C10.1648 19.3907 10.6396 19.3842 10.9366 19.6729L12.1573 20.8604C12.1652 20.8681 12.1734 20.8759 12.1817 20.8839C12.2946 20.9935 12.434 21.1285 12.5303 21.2549C12.6186 21.3708 12.8881 21.7603 12.6661 22.2296C12.4518 22.6821 12.0011 22.7356 11.8536 22.7462C11.6959 22.7574 11.5041 22.7425 11.3477 22.7305C11.3362 22.7297 11.3246 22.7284 11.3135 22.7276C7.8724 22.468 5.6129 20.8091 4.21781 18.8174C2.84227 16.8537 2.31494 14.5838 2.25101 13.0313C2.234 12.6176 2.55514 12.2683 2.96879 12.251ZM17.5 1.25006C18.8548 1.25006 20 2.31589 20 3.68756V4.74908C20.0751 4.77183 20.1496 4.79924 20.2237 4.83209C20.8438 5.10729 21.3212 5.62751 21.5664 6.26178C21.6723 6.53571 21.7126 6.81766 21.7315 7.11432C21.7496 7.39974 21.75 7.74753 21.75 8.16412V8.211C21.75 8.62759 21.7496 8.97539 21.7315 9.2608C21.7126 9.55746 21.6723 9.83942 21.5664 10.1133C21.3212 10.7476 20.8438 11.2678 20.2237 11.543C19.9514 11.6638 19.6722 11.7097 19.3868 11.7305C19.1153 11.7503 18.7865 11.7501 18.4014 11.7501H16.5987C16.2136 11.7501 15.8848 11.7503 15.6133 11.7305C15.3279 11.7097 15.0486 11.6638 14.7764 11.543C14.1563 11.2678 13.6789 10.7476 13.4336 10.1133C13.3277 9.83942 13.2875 9.55746 13.2686 9.2608C13.2504 8.97539 13.25 8.62759 13.25 8.211V8.16412C13.25 7.74753 13.2504 7.39974 13.2686 7.11432C13.2875 6.81766 13.3277 6.53571 13.4336 6.26178C13.6789 5.62751 14.1563 5.10729 14.7764 4.83209C14.8505 4.79924 14.925 4.77183 15 4.74908V3.68756C15 2.31589 16.1453 1.25006 17.5 1.25006ZM17.5 2.75006C16.9218 2.75006 16.5 3.19527 16.5 3.68756V4.62506H18.5V3.68756C18.5 3.19527 18.0783 2.75006 17.5 2.75006Z" fill="#FF6108"/>
+    </svg>
+    <span>This site does not support<br>horizontal layout on mobile</span>
   </div>
 
   <!-- Main content -->
@@ -12371,9 +12482,29 @@ document.addEventListener('DOMContentLoaded', () => {
       s = (vw - padding * 2) / CASE_W;           // narrow: shrink to fit viewport
     }
     document.getElementById('case-overlay').style.setProperty('--case-scale', s.toString());
+    compensateCaseHeight(s);
+  }
+  // scale (unlike zoom) shrinks the popup only visually — its LAYOUT
+  // height, and so how far #case-overlay thinks it needs to scroll,
+  // stays at the full unscaled size. That left a large empty gap below
+  // the visible content once scrolled to the bottom (a "chin"). Pull it
+  // back up by exactly the height that scaling visually removed.
+  function compensateCaseHeight(s) {
+    const activeWrap = document.querySelector('[id^="case-popup-"][id$="-wrap"].active');
+    if (!activeWrap) return;
+    // Every popup's own margin-top is 40px (unaffected by scale — margin
+    // sits outside the scaled box). Match margin-bottom to that same
+    // 40px once scale's shrinkage (from the top-anchored transform-
+    // origin, which piles all the "lost" height onto the bottom) is
+    // accounted for — not collapse the gap to zero.
+    const TARGET_GAP = 40;
+    activeWrap.style.marginBottom = '0px'; // clear before measuring natural height
+    const naturalH = activeWrap.offsetHeight;
+    activeWrap.style.marginBottom = (TARGET_GAP + naturalH * (s - 1)) + 'px';
   }
   scaleCasePages();
   window.addEventListener('resize', scaleCasePages);
+  window._scaleCasePages = scaleCasePages;
 
   // ── Auto-scale case popups (mobile) ─────
   const CASE_W_MOBILE = 720;
@@ -12440,6 +12571,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Skip when case popup is open
       if (_gyroOverlay && _gyroOverlay.classList.contains('visible')) { requestAnimationFrame(gyroAnim); return; }
+
+      // This whole system was built for genuine mobile-scene (the
+      // card-1/card-2 element refs above are explicitly "-mobile-"
+      // ids), including its generic fallback further below that tilts
+      // ANY other card's background+tags by device orientation. On a
+      // tablet using the newer touch-carousel (which reuses the DESKTOP
+      // .card-item markup, gated only by pointer:coarse same as this),
+      // that fallback was firing too — the physical tilt from the very
+      // act of tapping to navigate landed right as a card settled,
+      // reading as "background and tags slide a couple px after
+      // landing, title/subtitle don't" (title/subtitle were never
+      // referenced by the fallback branch at all). Restricting to
+      // portrait keeps this to genuine phone mobile-scene only.
+      if (!window.matchMedia('(orientation: portrait)').matches) { requestAnimationFrame(gyroAnim); return; }
 
       curGyroX += (gyroX - curGyroX) * GYRO_EASE;
       curGyroY += (gyroY - curGyroY) * GYRO_EASE;
@@ -12978,12 +13123,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let cards = [...masterOrder];
   window._cards = cards;
 
-  // State: back card peeks from below
+  // State: back card peeks from below (desktop stacked-deck look).
+  // Touch devices (iPad/tablet, any orientation) get a horizontal
+  // slide-carousel instead — but that needs to know which DIRECTION is
+  // being navigated (forward exits should go left, backward exits go
+  // right), so those values are computed inline within navigate() below,
+  // where dir is already known, rather than as fixed constants here.
   const BACK  = 'translateY(36px) scale(0.95) rotateZ(-1.2deg)';
   const FRONT = 'translateY(0px)  scale(1)    rotateZ(0deg)';
   const OUT   = 'translateY(36px) scale(0.95) rotateZ(-1.2deg)';
 
   const HIDDEN = 'translateY(60px) scale(0.9) rotateZ(-2deg)';
+  const TOUCH_GAP = 80; // px of breathing room between cards during the slide
+  const TOUCH_CENTER = 'translateX(0)                     scale(1) rotateZ(0deg)';
+  const TOUCH_RIGHT  = `translateX(calc(100% + ${TOUCH_GAP}px))  scale(1) rotateZ(0deg)`;
+  const TOUCH_LEFT   = `translateX(calc(-100% - ${TOUCH_GAP}px)) scale(1) rotateZ(0deg)`;
 
   // ─── GPU texture management via src detachment ───
   // content-visibility:hidden CACHES rendering state (doesn't free memory).
@@ -13119,12 +13273,13 @@ document.addEventListener('DOMContentLoaded', () => {
       updateHomeBtn();
 
       back.style.zIndex = '3';
-      back.style.transform = FRONT;
+      back.style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
+      if (IS_TOUCH) back.style.opacity = '1';
       back.classList.remove('is-back');
       back.classList.add('is-front');
 
       front.style.zIndex = '0';
-      front.style.transform = HIDDEN;
+      front.style.transform = IS_TOUCH ? TOUCH_LEFT : HIDDEN;
       front.style.opacity = '0';
       front.classList.remove('is-front');
 
@@ -13134,8 +13289,8 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreCardImages(newBack); // re-attach images before it appears
         newBack.classList.add('no-transition');
         newBack.style.zIndex = '1';
-        newBack.style.transform = BACK;
-        newBack.style.opacity = '1';
+        newBack.style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+        newBack.style.opacity = IS_TOUCH ? '0' : '1';
         newBack.classList.add('is-back');
       }
 
@@ -13152,7 +13307,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Keep cards[2+] hidden
           for (let i = 2; i < cards.length; i++) {
             cards[i].style.zIndex = '0';
-            cards[i].style.transform = HIDDEN;
+            cards[i].style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
             cards[i].style.opacity = '0';
             cards[i].classList.remove('is-back', 'is-front');
           }
@@ -13187,8 +13342,8 @@ document.addEventListener('DOMContentLoaded', () => {
       restoreCardImages(hidden); // re-attach images before it appears
       hidden.classList.add('no-transition');
       hidden.style.zIndex    = '2';
-      hidden.style.transform = BACK;
-      hidden.style.opacity   = '1';
+      hidden.style.transform = IS_TOUCH ? TOUCH_LEFT : BACK;
+      hidden.style.opacity   = IS_TOUCH ? '0' : '1';
       hidden.classList.remove('is-back');
 
       // Update eye color immediately before animation starts
@@ -13204,12 +13359,13 @@ document.addEventListener('DOMContentLoaded', () => {
         front.classList.add('animating');
 
         hidden.style.zIndex    = '3';
-        hidden.style.transform = FRONT;
+        hidden.style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
+        if (IS_TOUCH) hidden.style.opacity = '1';
         hidden.classList.add('is-front');
 
         front.style.zIndex    = '1';
-        front.style.transform = BACK;
-        front.style.opacity   = '1';
+        front.style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+        front.style.opacity   = IS_TOUCH ? '0' : '1';
         front.classList.remove('is-front');
         front.classList.add('is-back');
 
@@ -13217,7 +13373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const oldBack = cards[1];
         if (oldBack) {
           oldBack.style.zIndex    = '0';
-          oldBack.style.transform = HIDDEN;
+          oldBack.style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
           oldBack.style.opacity   = '0';
           oldBack.classList.remove('is-back');
         }
@@ -13232,11 +13388,11 @@ document.addEventListener('DOMContentLoaded', () => {
           front.classList.remove('animating');
           // Ensure correct states
           cards[1].style.zIndex = '1';
-          cards[1].style.transform = BACK;
-          cards[1].style.opacity = '1';
+          cards[1].style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+          cards[1].style.opacity = IS_TOUCH ? '0' : '1';
           for (let i = 2; i < cards.length; i++) {
             cards[i].style.zIndex = '0';
-            cards[i].style.transform = HIDDEN;
+            cards[i].style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
             cards[i].style.opacity = '0';
           }
           applyFarHidden(); // free GPU textures of far cards
@@ -13466,7 +13622,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // in updateGridCamera()'s transform; touch-drag panning divides its
   // delta by the same factor so a finger still tracks 1:1 on screen.
   function gridMobileScale() {
-    return window.innerWidth <= 600 ? 0.25 : 1;
+    return window.innerWidth <= 600 ? 0.325 : 1;
   }
 
   // Flat pre-rendered covers for grid view — swapped in instead of the
@@ -13601,12 +13757,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const dispY = ((camY % PATTERN_H) + PATTERN_H) % PATTERN_H - PATTERN_H;
     gridCanvas.style.transform = `scale(${gscale}) translate(${dispX}px, ${dispY}px)`;
 
-    // Sphere effect — screenCX/CY are in real screen pixels, but tile
-    // positions live in the pre-scale pattern space that transform above
-    // scales down. Divide by gscale so both sides of the distance math
-    // are in the same coordinate system regardless of the mobile scale.
-    const screenCX = (window.innerWidth / 2) / gscale;
-    const screenCY = (window.innerHeight / 2) / gscale;
+    // Sphere effect — the composed "scale(gscale) translate(...)" above
+    // is anchored at grid-canvas's own transform-origin (its default
+    // 50% 50%, which sits at exact viewport center since the canvas
+    // itself fills the screen). That anchoring means a LOCAL coordinate
+    // of exactly vw/2 always projects to screen-center, regardless of
+    // gscale — dividing by gscale here (the previous version) was
+    // wrong; it shifted the reference point away from center by exactly
+    // the amount the mobile scale differs from 1, which reads as the
+    // lens effect happening in a corner instead of centered on mobile.
+    const screenCX = window.innerWidth / 2;
+    const screenCY = window.innerHeight / 2;
     const maxDist = Math.max(screenCX, screenCY) * 0.9;
 
     gridTiles.forEach(tile => {
@@ -13642,10 +13803,11 @@ document.addEventListener('DOMContentLoaded', () => {
     cur.style.opacity = '1';
     ring.style.opacity = '1';
     if (!gridRendered) renderGrid();
-    // Center camera on middle of pattern
-    const gscale0 = gridMobileScale();
-    camX = -(PATTERN_W / 2) + (window.innerWidth / 2) / gscale0;
-    camY = -(PATTERN_H / 2) + (window.innerHeight / 2) / gscale0;
+    // Center camera on middle of pattern. Absolute anchor-point math (not
+    // a relative delta), so — same reasoning as the lens-effect fix
+    // above — no division by gscale here either.
+    camX = -(PATTERN_W / 2) + (window.innerWidth / 2);
+    camY = -(PATTERN_H / 2) + (window.innerHeight / 2);
     updateGridCamera();
     gridView.classList.add('active');
     gridCloseBtn.classList.add('visible');
@@ -14370,6 +14532,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const _animOverlay = document.getElementById('case-overlay');
   const _animCover = document.getElementById('card-cover');
   (function anim() {
+    // This whole loop drives mouse-position-based tilt/parallax (deck
+    // tilt, shadows, and — critically — the individual per-card
+    // background/tags/logo transforms further below). None of it makes
+    // sense without a real mouse, and gating just the mousemove listener
+    // (elsewhere) wasn't enough to stop it from touching card content —
+    // skip the whole thing outright on touch, so it can't be a factor
+    // in the settle-shift at all, whatever its exact mechanism was.
+    if (IS_TOUCH) { requestAnimationFrame(anim); return; }
+
     cRX += (tRX - cRX) * EASE;
     cRY += (tRY - cRY) * EASE;
 
@@ -18173,6 +18344,7 @@ document.addEventListener('DOMContentLoaded', () => {
       requestCarParallax();
       requestAffstoreRef();
       requestAffstoreMb();
+      if (window._scaleCasePages) window._scaleCasePages();
       if (pageId === 'case-popup-2-wrap') {
         setTimeout(() => {
           const heroTitle = document.getElementById('case-hero-title');
