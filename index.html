@@ -91,6 +91,17 @@
     overflow: visible;
     transform-origin: center center;
   }
+  /* Desktop's stacked deck needs overflow:visible to show cards
+     peeking out from below the front one — that's the whole point of
+     the look. The touch carousel doesn't stack at all; cards slide
+     fully off-screen horizontally instead (TOUCH_LEFT/TOUCH_RIGHT).
+     With overflow staying visible there too, an "off-screen" card
+     could still show through at the edge once #scene gets scaled down
+     to fit a narrower-than-1328px viewport like an iPad's — the
+     visible peeking card the screenshot showed. */
+  body.is-touch #scene {
+    overflow: hidden;
+  }
 
   /* ── Mobile (portrait) canvas ──────────────
      Fixed 720×1440 reference frame, scaled to fit the real viewport via JS
@@ -1510,25 +1521,8 @@
     transition: transform 0.95s cubic-bezier(0.66, 0, 0.34, 1);
     will-change: transform;
   }
-  /* Touch: abandoning the rotateY 3D technique entirely rather than
-     continuing to chase CSS property combinations — five attempts at
-     matching mobile's recipe property-by-property (will-change,
-     -webkit- prefixing, perspective placement) didn't resolve the
-     mirrored-content flash, the duplicate-card ghosting, or the
-     disappear/reappear on navigation. All three symptoms are
-     consistent with the same underlying category of bug: backface-
-     visibility unreliably hiding the rotated-away face in this nested
-     3D + touch-carousel context on iPad Safari specifically. A
-     crossfade (opacity only, no rotation, no perspective, no
-     backface-visibility dependency) can't have this category of bug
-     at all — there's nothing 3D happening for Safari to get wrong.
-     #card-1-flip itself just stays static; front/back opacity is
-     toggled directly (rules further down, near #card-1-front/back). */
-  body.is-touch #card-1-flip,
-  body.is-touch #card-1-flip.flipped {
-    transform: none !important;
-    transition: none !important;
-    will-change: auto !important;
+  #card-1-flip.flipped {
+    transform: perspective(2600px) rotateY(180deg);
   }
   #card-1-front,
   #card-1-back {
@@ -1544,31 +1538,6 @@
     transform: rotateY(180deg);
     background: #000;
     border: 2px solid #1A1A1A;
-  }
-  /* Touch crossfade: same .flipped class the JS already toggles, just
-     driving opacity instead of a parent rotation. Back's own
-     rotateY(180deg) above was needed so it displayed right-way-round
-     once the PARENT physically flipped 180deg — with no parent rotation
-     happening anymore on touch, that pre-rotation would show the back
-     face mirrored, so it's neutralized to transform:none here too. */
-  body.is-touch #card-1-front {
-    opacity: 1;
-    pointer-events: auto;
-    transition: opacity 0.5s ease;
-  }
-  body.is-touch #card-1-back {
-    transform: none !important;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease;
-  }
-  body.is-touch #card-1-flip.flipped #card-1-front {
-    opacity: 0;
-    pointer-events: none;
-  }
-  body.is-touch #card-1-flip.flipped #card-1-back {
-    opacity: 1;
-    pointer-events: auto;
   }
   /* Back tags — temporarily hidden while trying the animated background */
   #card-1-back-tags {
@@ -2304,10 +2273,18 @@
     box-sizing: border-box;
   }
   #page-nav.show { opacity: 1; pointer-events: all; }
-  #nav-stack:hover #page-nav {
-    width: 56px;
-    padding: 22px 0;
-    gap: 22px;
+  /* hover:hover (not just any pointer support) so this can never
+     match on touch — iOS Safari keeps :hover matched after a tap with
+     nothing to clear it, which was the original stuck-large bug. This
+     is simpler and more reliable than pinning every property to an
+     explicit value on touch (tried twice, got something wrong both
+     times) — nothing here needs to change on touch, so nothing does. */
+  @media (hover: hover) {
+    #nav-stack:hover #page-nav {
+      width: 56px;
+      padding: 22px 0;
+      gap: 22px;
+    }
   }
   /* invisible catch area so the bar reacts before the pointer reaches it */
   #page-nav::before {
@@ -2346,9 +2323,11 @@
   }
   /* both controls grow together whenever the stack is hovered, so they always
      match in size */
-  #nav-stack:hover #nav-pause { width: 56px; height: 56px; }
-  #nav-stack:hover #nav-pause,
-  #nav-stack:hover #page-nav { background: #262626; }
+  @media (hover: hover) {
+    #nav-stack:hover #nav-pause { width: 56px; height: 56px; }
+    #nav-stack:hover #nav-pause,
+    #nav-stack:hover #page-nav { background: #262626; }
+  }
   /* circular 5s progress around the button */
   #np-ring {
     position: absolute;
@@ -2597,7 +2576,9 @@
     overflow: visible;
     transition: gap 0.16s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  #nav-stack:hover #nav-dots-row { gap: 22px; }
+  @media (hover: hover) {
+    #nav-stack:hover #nav-dots-row { gap: 22px; }
+  }
   .nav-dot {
     width: 7px;
     height: 7px;
@@ -2615,9 +2596,11 @@
     position: relative;
   }
   /* on bar hover the dots become real, comfortably clickable targets */
-  #nav-stack:hover .nav-dot {
-    width: 15px;
-    height: 15px;
+  @media (hover: hover) {
+    #nav-stack:hover .nav-dot {
+      width: 15px;
+      height: 15px;
+    }
   }
   /* each dot also keeps its own generous invisible hit box */
   .nav-dot::before {
@@ -9268,26 +9251,6 @@
   body.is-touch * {
     cursor: auto !important;
   }
-  /* No scaling on touch at all, by direct request — the nav bar and
-     play/pause button stay at base size unconditionally. Simpler and
-     more reliable than chasing iOS Safari's stuck-:hover behavior with
-     conditional CSS states. */
-  body.is-touch #nav-stack #nav-pause {
-    width: 46px !important;
-    height: 46px !important;
-  }
-  body.is-touch #nav-stack #page-nav {
-    width: auto !important;
-    padding: 14px 10px !important;
-    gap: 14px !important;
-  }
-  body.is-touch #nav-stack #nav-dots-row {
-    gap: 14px !important;
-  }
-  body.is-touch #nav-stack .nav-dot {
-    width: 7px !important;
-    height: 7px !important;
-  }
   /* Desktop's #card-1 stays "flat" (untouched, was already correct
      there) — this is specifically for touch (iPad, no hover — the
      device where the bug actually showed up). "Flat" flattened the
@@ -12280,20 +12243,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // leftover logic can leave things in a stuck/inconsistent visual state.
   // This flags touch explicitly so JS can check it directly instead of
   // relying only on the CSS side effect.
-  // matchMedia's hover/pointer check alone can be unreliable specifically
-  // on iPad — depending on iPadOS/browser version, it can sometimes
-  // report hover-capable/fine-pointer as primary even without an
-  // actively connected mouse, simply because trackpad support exists at
-  // the OS level. That would make IS_TOUCH wrongly false on an iPad,
-  // silently falling through to every desktop-only code path (stacked
-  // deck instead of the touch carousel) despite the device genuinely
-  // being touch-first. navigator.maxTouchPoints is a direct hardware
-  // capability check, not an input-preference guess, and iPads reliably
-  // report it — used here as an OR fallback for exactly that gap.
-  const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches
-    || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   document.body.classList.toggle('is-touch', IS_TOUCH);
   window._isTouch = IS_TOUCH;
+  // Temporary diagnostic overlay — add ?debug=1 to the URL to see real
+  // matchMedia/touch values directly on the device itself, no Mac or
+  // Web Inspector needed. Screenshot it and that replaces guessing with
+  // actual data from the real iPad. Safe to delete this whole block
+  // once the touch-detection question is settled either way.
+  if (location.search.includes('debug=1')) {
+    const dbg = document.createElement('div');
+    dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font:11px monospace;padding:10px;z-index:999999;white-space:pre-wrap;max-height:40vh;overflow:auto;';
+    const mqHoverNone = window.matchMedia('(hover: none)').matches;
+    const mqPointerCoarse = window.matchMedia('(pointer: coarse)').matches;
+    const mqHoverHover = window.matchMedia('(hover: hover)').matches;
+    const mqPointerFine = window.matchMedia('(pointer: fine)').matches;
+    dbg.textContent =
+      'hover:none = ' + mqHoverNone + '\n' +
+      'pointer:coarse = ' + mqPointerCoarse + '\n' +
+      'hover:hover = ' + mqHoverHover + '\n' +
+      'pointer:fine = ' + mqPointerFine + '\n' +
+      'IS_TOUCH (combined) = ' + IS_TOUCH + '\n' +
+      'navigator.maxTouchPoints = ' + navigator.maxTouchPoints + '\n' +
+      'innerWidth x innerHeight = ' + window.innerWidth + ' x ' + window.innerHeight + '\n' +
+      'userAgent = ' + navigator.userAgent;
+    document.body.appendChild(dbg);
+  }
   // Matching the visual swap above — CSS can restyle #scroll-line, but
   // the "Scroll" text itself is plain content, not something a
   // stylesheet can rewrite.
@@ -14424,6 +14399,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         targetCard.style.zIndex = '3';
         targetCard.style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
+        targetCard.style.opacity = '1';
         targetCard.classList.add('is-front');
 
         currentFront.style.zIndex = '0';
@@ -14539,12 +14515,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     // Mobile's flip has always hard-swapped display at the animation's
     // midpoint as a safety net, in case backface-visibility doesn't
-    // fully hide the rotated-away face in this nested 3D context — this
-    // was added for desktop to match, but touch no longer uses the 3D
-    // rotation technique at all (replaced with a plain opacity
-    // crossfade — see the body.is-touch CSS rules near #card-1-front).
-    // This hard swap is skipped on touch now: it would otherwise cut
-    // the opacity transition off abruptly mid-fade at the 475ms mark.
+    // fully hide the rotated-away face in this nested 3D context —
+    // desktop matches it now too.
     const cardFrontEl = document.getElementById('card-1-front');
     const cardBackEl  = document.getElementById('card-1-back');
     let flipMidTimer = null;
@@ -14553,7 +14525,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cardBackEl)  cardBackEl.style.display  = showFront ? 'none' : '';
     }
     function doDesktopFlip(nowFlipped) {
-      if (IS_TOUCH) return;
       clearTimeout(flipMidTimer);
       flipMidTimer = setTimeout(() => setDesktopFlipFaces(!nowFlipped), 475);
     }
