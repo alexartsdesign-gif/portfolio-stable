@@ -7991,8 +7991,9 @@
       top: 54px !important;
       left: 50% !important;
       right: auto !important;
-      transform: translateX(-50%);
-      width: 560px;
+      transform: none !important;
+      margin-left: -190px;
+      width: 380px;
       text-align: center;
     }
     #case-hero-subtitle {
@@ -13374,6 +13375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // moving on turns the business card back to its front
     const _flip = document.getElementById('card-1-flip');
     if (_flip) _flip.classList.remove('flipped');
+    if (IS_TOUCH && window._doTouchCrossfade) window._doTouchCrossfade(false);
     // Don't navigate while case page is open
     const caseOverlay = document.getElementById('case-overlay');
     if (caseOverlay && (caseOverlay.classList.contains('visible') || caseOverlay.classList.contains('closing'))) return;
@@ -14553,6 +14555,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cardFrontEl.style.pointerEvents = showBack ? 'none' : 'auto';
       cardBackEl.style.pointerEvents  = showBack ? 'auto' : 'none';
     }
+    window._doTouchCrossfade = doTouchCrossfade;
     flipBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       cardFlip.classList.toggle('flipped');
@@ -18114,7 +18117,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <img src="https://res.cloudinary.com/dm2njkzir/image/upload/q_auto,f_auto,w_1600,c_limit/v1786051852/02-Merch-Affstore-03_m3aghn.webp" alt="">
         </div>
         <div class="case-09-mrow-cell case-09-mrow-video case-reveal-img" style="transition-delay: 0.14s;">
-          <video src="https://res.cloudinary.com/dm2njkzir/video/upload/v1786058648/stor02_t6akqc.mp4" autoplay muted loop playsinline></video>
+          <video id="case-09-video" src="https://res.cloudinary.com/dm2njkzir/video/upload/w_800,q_auto/v1786058648/stor02_t6akqc.mp4" autoplay muted loop playsinline></video>
         </div>
       </div>
 
@@ -18524,6 +18527,19 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         if (window._scaleCasePages) window._scaleCasePages();
       }, 1300);
+      if (pageId === 'case-popup-9-wrap' && window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+        // Affstore's autoplay video starts decoding+playing the instant
+        // it enters the DOM — right as the popup's own opening
+        // animation is trying to run. Pausing it immediately and only
+        // starting playback once the popup has settled keeps that
+        // decode cost off the critical opening frames, same idea as
+        // the compensateCaseHeight delay above.
+        const affVideo = document.getElementById('case-09-video');
+        if (affVideo) {
+          affVideo.pause();
+          setTimeout(() => { affVideo.play().catch(() => {}); }, 1300);
+        }
+      }
       if (pageId === 'case-popup-2-wrap') {
         setTimeout(() => {
           const heroTitle = document.getElementById('case-hero-title');
