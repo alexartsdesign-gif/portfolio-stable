@@ -2445,16 +2445,16 @@
   /* Grid close button */
   #grid-close {
     position: fixed;
-    top: 64px;
-    right: 64px;
+    top: 28px;
+    right: 32px;
     z-index: 50001;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0;
     cursor: none;
-    width: 64px;
-    height: 64px;
+    width: 50px;
+    height: 50px;
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
     background-clip: padding-box;
     overflow: hidden;
@@ -2468,6 +2468,21 @@
   #grid-close:hover {
     border-color: rgba(255,255,255,0.2);
     transform: scale(1.05);
+  }
+  /* Position stays 1:1 with home-btn/grid-btn at every width (top:28,
+     right:32) — only the size reverts to the original 64px on genuine
+     wide desktop, matching the same 1400px threshold home-btn itself
+     uses to switch out of circle-mode. Narrower than that (tablet/iPad
+     range), it stays at the 50px size matching home-btn's own circle. */
+  @media (min-width: 1401px) {
+    #grid-close {
+      width: 64px;
+      height: 64px;
+    }
+    #grid-close-icon svg {
+      width: 28px;
+      height: 28px;
+    }
   }
   /* Label hidden by default — revealed as a tooltip to the left of the
      circle on hover, so the button reads icon-only at rest like case-close */
@@ -2501,8 +2516,8 @@
     justify-content: center;
   }
   #grid-close-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
   }
   #grid-close.visible {
     opacity: 1;
@@ -7207,7 +7222,7 @@
     justify-content: center;
     cursor: none;
     z-index: 51002;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease, border-color 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, border-color 0.3s ease;
     background: linear-gradient(165deg, #11100F 10.88%, #1a1a1a 89.56%);
     background-clip: padding-box;
     overflow: hidden;
@@ -7575,6 +7590,16 @@
 
   /* ── Mobile responsive for Case Page 02 ──── */
   @media (max-width: 900px) {
+    /* iPad is fine with the base 64px/64px corner offset — this pulls
+       it in tighter specifically for phones (narrower than the 600px
+       tablet threshold used elsewhere), where 64px reads as too far
+       from the actual corner on a much smaller screen. */
+    @media (max-width: 600px) {
+      #case-close {
+        top: 24px !important;
+        right: 24px !important;
+      }
+    }
     #case-popup-3-wrap {
       width: 720px;
       margin-top: 0;
@@ -9201,15 +9226,16 @@
   body.is-touch * {
     cursor: auto !important;
   }
-  /* iOS Safari keeps :hover matched after a tap (no mouse ever moves away
-     to clear it) — #nav-stack:hover grows several things at once
-     (nav-pause 46→56px, page-nav's width/padding/gap, the dots' own
-     gap, and each dot 7→15px), and on a touch device that whole hover
-     state can get stuck engaged with nothing to trigger it clearing.
-     Earlier this only pinned nav-pause specifically; the rest of the
-     bar was still growing and staying stuck too. Pin everything back
-     to its base (non-hover) size on touch — the hover-grow doesn't
-     serve a purpose there anyway, there's no cursor hovering. */
+  /* iOS Safari keeps :hover matched after a tap (no mouse ever moves
+     away to clear it) — #nav-stack:hover grows several things at once,
+     and on touch that whole hover state could get stuck engaged with
+     nothing to trigger it clearing. First attempt just pinned
+     everything back to base size on touch, killing the grow-on-tap
+     feedback entirely — overcorrected. This keeps the same visual idea
+     (bar grows when you interact with it) but drives it off a JS-
+     toggled class instead of :hover, with a milder growth amount than
+     desktop's, and a 1s-after-last-tap timer to shrink it back down
+     (JS setup is further down, near the other touch-specific script). */
   body.is-touch #nav-stack:hover #nav-pause {
     width: 46px !important;
     height: 46px !important;
@@ -9225,6 +9251,21 @@
   body.is-touch #nav-stack:hover .nav-dot {
     width: 7px !important;
     height: 7px !important;
+  }
+  body.is-touch #nav-stack.touch-grown #nav-pause {
+    width: 51px !important;
+    height: 51px !important;
+  }
+  body.is-touch #nav-stack.touch-grown #page-nav {
+    padding: 18px 6px !important;
+    gap: 18px !important;
+  }
+  body.is-touch #nav-stack.touch-grown #nav-dots-row {
+    gap: 18px !important;
+  }
+  body.is-touch #nav-stack.touch-grown .nav-dot {
+    width: 11px !important;
+    height: 11px !important;
   }
   /* Desktop's #card-1 stays "flat" (untouched, was already correct
      there) — this is specifically for touch (iPad, no hover — the
@@ -12222,6 +12263,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollLabel = document.getElementById('scroll-label');
     if (scrollLabel) scrollLabel.textContent = 'Swipe';
   }
+  // Replaces :hover-driven grow for the nav bar on touch — :hover
+  // sticking after a tap (nothing to un-hover with) was why it used to
+  // get stuck engaged, so this drives the grow off a plain JS-toggled
+  // class instead, shrinking back down 1s after the last tap regardless
+  // of whatever :hover state Safari thinks is active.
+  if (IS_TOUCH) {
+    const navStackEl = document.getElementById('nav-stack');
+    let navGrowTimer = null;
+    if (navStackEl) {
+      navStackEl.addEventListener('touchstart', () => {
+        navStackEl.classList.add('touch-grown');
+        clearTimeout(navGrowTimer);
+        navGrowTimer = setTimeout(() => {
+          navStackEl.classList.remove('touch-grown');
+        }, 1000);
+      }, { passive: true });
+    }
+  }
 
   // ── Auto-scale ─────────────────────────
   const CARD_W = 1328, CARD_H = 1066;
@@ -12569,13 +12628,21 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', '1');
       return;
     }
+    // Popups were reading small across the board on real phones — this
+    // boosts every one of them uniformly beyond the exact viewport-fit
+    // calculation below. #case-overlay centers its content and clips
+    // horizontal overflow, so going wider than the viewport stays
+    // centered — the extra width is trimmed equally off both sides
+    // rather than pushing the popup off-center.
+    const MOBILE_SCALE_BOOST = 1.18;
     const padding = 0;
+    let s;
     if (vw >= CASE_W_MOBILE + padding * 2) {
-      document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', '1');
+      s = 1;
     } else {
-      const s = (vw - padding * 2) / CASE_W_MOBILE;
-      document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', s.toString());
+      s = (vw - padding * 2) / CASE_W_MOBILE;
     }
+    document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', (s * MOBILE_SCALE_BOOST).toString());
   }
   scaleCasePagesMobile();
   window.addEventListener('resize', scaleCasePagesMobile);
@@ -14446,10 +14513,30 @@ document.addEventListener('DOMContentLoaded', () => {
       void cardFlip.offsetWidth;
       cardFlip.classList.add('sweep');
     };
+    // Mobile's flip has always hard-swapped display at the animation's
+    // midpoint as a safety net, in case backface-visibility doesn't
+    // fully hide the rotated-away face in this nested 3D context —
+    // desktop never had that fallback, relying purely on CSS. That gap
+    // is very likely why both faces (mirrored front bleeding through
+    // with the correct content) kept showing simultaneously on iPad
+    // even after fixing #card-1's transform-style. Same technique,
+    // same 475ms midpoint (matches this element's own 0.95s transition).
+    const cardFrontEl = document.getElementById('card-1-front');
+    const cardBackEl  = document.getElementById('card-1-back');
+    let flipMidTimer = null;
+    function setDesktopFlipFaces(showFront) {
+      if (cardFrontEl) cardFrontEl.style.display = showFront ? '' : 'none';
+      if (cardBackEl)  cardBackEl.style.display  = showFront ? 'none' : '';
+    }
+    function doDesktopFlip(nowFlipped) {
+      clearTimeout(flipMidTimer);
+      flipMidTimer = setTimeout(() => setDesktopFlipFaces(!nowFlipped), 475);
+    }
     flipBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       cardFlip.classList.toggle('flipped');
       doSweep();
+      doDesktopFlip(cardFlip.classList.contains('flipped'));
     });
     const cardBack = document.getElementById('card-1-back');
     if (cardBack) {
@@ -14458,6 +14545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
         cardFlip.classList.remove('flipped');
         doSweep();
+        doDesktopFlip(false);
       });
     }
     // The whole front face flips too — but leave the real links alone.
@@ -14469,6 +14557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
         cardFlip.classList.add('flipped');
         doSweep();
+        doDesktopFlip(true);
       });
     }
     cardFlip.addEventListener('animationend', (e) => {
@@ -18648,7 +18737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(closeScrollT);
     closeScrollT = setTimeout(() => {
       closeBtn.classList.remove('scroll-hidden');
-    }, 500);
+    }, 150);
   });
 
   // ── Affstore Ref Board image: same slow vertical pan McLaren's Phase 01
