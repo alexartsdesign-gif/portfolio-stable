@@ -1510,24 +1510,25 @@
     transition: transform 0.95s cubic-bezier(0.66, 0, 0.34, 1);
     will-change: transform;
   }
-  #card-1-flip.flipped {
-    transform: perspective(2600px) rotateY(180deg);
-  }
-  /* Touch-specific: matches mobile's #m-card1-flip recipe exactly —
-     no will-change (mobile's own comment already flagged this as
-     something that "can force a compositing layer that flattens
-     nested 3D in some engines"), -webkit- prefix added, and
-     perspective moved OFF this element's own transform (now on the
-     parent #card-1 instead, added above) since embedding perspective()
-     inline is a different technique than mobile's separate-property
-     approach. */
-  body.is-touch #card-1-flip {
-    will-change: auto !important;
-    -webkit-transform-style: preserve-3d !important;
-    transform: rotateY(0deg) !important;
-  }
+  /* Touch: abandoning the rotateY 3D technique entirely rather than
+     continuing to chase CSS property combinations — five attempts at
+     matching mobile's recipe property-by-property (will-change,
+     -webkit- prefixing, perspective placement) didn't resolve the
+     mirrored-content flash, the duplicate-card ghosting, or the
+     disappear/reappear on navigation. All three symptoms are
+     consistent with the same underlying category of bug: backface-
+     visibility unreliably hiding the rotated-away face in this nested
+     3D + touch-carousel context on iPad Safari specifically. A
+     crossfade (opacity only, no rotation, no perspective, no
+     backface-visibility dependency) can't have this category of bug
+     at all — there's nothing 3D happening for Safari to get wrong.
+     #card-1-flip itself just stays static; front/back opacity is
+     toggled directly (rules further down, near #card-1-front/back). */
+  body.is-touch #card-1-flip,
   body.is-touch #card-1-flip.flipped {
-    transform: rotateY(180deg) !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
   }
   #card-1-front,
   #card-1-back {
@@ -1543,6 +1544,31 @@
     transform: rotateY(180deg);
     background: #000;
     border: 2px solid #1A1A1A;
+  }
+  /* Touch crossfade: same .flipped class the JS already toggles, just
+     driving opacity instead of a parent rotation. Back's own
+     rotateY(180deg) above was needed so it displayed right-way-round
+     once the PARENT physically flipped 180deg — with no parent rotation
+     happening anymore on touch, that pre-rotation would show the back
+     face mirrored, so it's neutralized to transform:none here too. */
+  body.is-touch #card-1-front {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.5s ease;
+  }
+  body.is-touch #card-1-back {
+    transform: none !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  body.is-touch #card-1-flip.flipped #card-1-front {
+    opacity: 0;
+    pointer-events: none;
+  }
+  body.is-touch #card-1-flip.flipped #card-1-back {
+    opacity: 1;
+    pointer-events: auto;
   }
   /* Back tags — temporarily hidden while trying the animated background */
   #card-1-back-tags {
@@ -12254,7 +12280,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // leftover logic can leave things in a stuck/inconsistent visual state.
   // This flags touch explicitly so JS can check it directly instead of
   // relying only on the CSS side effect.
-  const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  // matchMedia's hover/pointer check alone can be unreliable specifically
+  // on iPad — depending on iPadOS/browser version, it can sometimes
+  // report hover-capable/fine-pointer as primary even without an
+  // actively connected mouse, simply because trackpad support exists at
+  // the OS level. That would make IS_TOUCH wrongly false on an iPad,
+  // silently falling through to every desktop-only code path (stacked
+  // deck instead of the touch carousel) despite the device genuinely
+  // being touch-first. navigator.maxTouchPoints is a direct hardware
+  // capability check, not an input-preference guess, and iPads reliably
+  // report it — used here as an OR fallback for exactly that gap.
+  const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches
+    || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
   document.body.classList.toggle('is-touch', IS_TOUCH);
   window._isTouch = IS_TOUCH;
   // Matching the visual swap above — CSS can restyle #scroll-line, but
@@ -14502,12 +14539,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     // Mobile's flip has always hard-swapped display at the animation's
     // midpoint as a safety net, in case backface-visibility doesn't
-    // fully hide the rotated-away face in this nested 3D context —
-    // desktop never had that fallback, relying purely on CSS. That gap
-    // is very likely why both faces (mirrored front bleeding through
-    // with the correct content) kept showing simultaneously on iPad
-    // even after fixing #card-1's transform-style. Same technique,
-    // same 475ms midpoint (matches this element's own 0.95s transition).
+    // fully hide the rotated-away face in this nested 3D context — this
+    // was added for desktop to match, but touch no longer uses the 3D
+    // rotation technique at all (replaced with a plain opacity
+    // crossfade — see the body.is-touch CSS rules near #card-1-front).
+    // This hard swap is skipped on touch now: it would otherwise cut
+    // the opacity transition off abruptly mid-fade at the 475ms mark.
     const cardFrontEl = document.getElementById('card-1-front');
     const cardBackEl  = document.getElementById('card-1-back');
     let flipMidTimer = null;
@@ -14516,6 +14553,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cardBackEl)  cardBackEl.style.display  = showFront ? 'none' : '';
     }
     function doDesktopFlip(nowFlipped) {
+      if (IS_TOUCH) return;
       clearTimeout(flipMidTimer);
       flipMidTimer = setTimeout(() => setDesktopFlipFaces(!nowFlipped), 475);
     }
