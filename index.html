@@ -91,17 +91,6 @@
     overflow: visible;
     transform-origin: center center;
   }
-  /* Desktop's stacked deck needs overflow:visible to show cards
-     peeking out from below the front one — that's the whole point of
-     the look. The touch carousel doesn't stack at all; cards slide
-     fully off-screen horizontally instead (TOUCH_LEFT/TOUCH_RIGHT).
-     With overflow staying visible there too, an "off-screen" card
-     could still show through at the edge once #scene gets scaled down
-     to fit a narrower-than-1328px viewport like an iPad's — the
-     visible peeking card the screenshot showed. */
-  body.is-touch #scene {
-    overflow: hidden;
-  }
 
   /* ── Mobile (portrait) canvas ──────────────
      Fixed 720×1440 reference frame, scaled to fit the real viewport via JS
@@ -12246,19 +12235,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   document.body.classList.toggle('is-touch', IS_TOUCH);
   window._isTouch = IS_TOUCH;
-  // Temporary diagnostic overlay — add ?debug=1 to the URL to see real
-  // matchMedia/touch values directly on the device itself, no Mac or
-  // Web Inspector needed. Screenshot it and that replaces guessing with
-  // actual data from the real iPad. Safe to delete this whole block
-  // once the touch-detection question is settled either way.
-  if (location.search.includes('debug=1')) {
+  // Temporary diagnostic overlay — shows on EVERY visit right now (no
+  // URL parameter needed), so it can't be missed. Screenshot it and
+  // send it over — that replaces guessing with actual data from the
+  // real device. Remove this whole block once the touch-detection
+  // question is settled either way.
+  (function() {
     const dbg = document.createElement('div');
-    dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font:11px monospace;padding:10px;z-index:999999;white-space:pre-wrap;max-height:40vh;overflow:auto;';
+    dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0000;color:#fff;font:13px monospace;padding:14px;z-index:2147483647;white-space:pre-wrap;border-bottom:4px solid #fff;';
     const mqHoverNone = window.matchMedia('(hover: none)').matches;
     const mqPointerCoarse = window.matchMedia('(pointer: coarse)').matches;
     const mqHoverHover = window.matchMedia('(hover: hover)').matches;
     const mqPointerFine = window.matchMedia('(pointer: fine)').matches;
     dbg.textContent =
+      'DEBUG PANEL\n' +
       'hover:none = ' + mqHoverNone + '\n' +
       'pointer:coarse = ' + mqPointerCoarse + '\n' +
       'hover:hover = ' + mqHoverHover + '\n' +
@@ -12268,7 +12258,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'innerWidth x innerHeight = ' + window.innerWidth + ' x ' + window.innerHeight + '\n' +
       'userAgent = ' + navigator.userAgent;
     document.body.appendChild(dbg);
-  }
+  })();
   // Matching the visual swap above — CSS can restyle #scroll-line, but
   // the "Scroll" text itself is plain content, not something a
   // stylesheet can rewrite.
