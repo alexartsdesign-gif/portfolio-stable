@@ -1490,6 +1490,10 @@
     border-radius: 80px;
     background: transparent;
     position: absolute;
+    /* Desktop was already perfect — left as "flat" here, untouched.
+       Touch (iPad, no hover at all) got the actual bug and its own
+       fix separately, scoped to body.is-touch below, rather than
+       changing this shared base rule for both entities at once. */
     transform-style: flat;
     overflow: visible;
     box-shadow:
@@ -7751,26 +7755,11 @@
       z-index: 2;
     }
 
-    /* Close button hidden on mobile — the swipe-down handle (pill +
-       arrow) is now the sole close affordance, matching the native
-       "swipe sheet down to dismiss" gesture instead of a tap target. */
-    #case-close {
-      display: none !important;
-    }
+    /* Reverted back to the X close button on mobile — the swipe-down
+       handle (pill + arrow) wasn't working well as the sole close
+       affordance, so it's hidden again and the tap target is back. */
     #case-swipe-indicator {
-      display: flex !important;
-      top: 32px !important;
-    }
-    #case-swipe-pill {
-      width: 56px !important;
-      height: 6px !important;
-      border-radius: 3px !important;
-      background: rgba(255,255,255,0.75) !important;
-    }
-    #case-swipe-arrow {
-      width: 26px !important;
-      height: 26px !important;
-      opacity: 0.8 !important;
+      display: none !important;
     }
     /* Grid view's "Card view" close button — bigger tap target, moved
        from top to bottom (thumb reach), stretched near full width with
@@ -7840,9 +7829,9 @@
         top: 28px !important;
         bottom: auto !important;
         left: auto !important;
-        right: 28px !important;
-        width: 64px !important;
-        height: 64px !important;
+        right: 32px !important;
+        width: 50px !important;
+        height: 50px !important;
         padding: 0 !important;
         justify-content: center !important;
         border-radius: 50% !important;
@@ -7854,8 +7843,8 @@
         display: none !important;
       }
       #grid-close-icon svg {
-        width: 28px !important;
-        height: 28px !important;
+        width: 22px !important;
+        height: 22px !important;
       }
     }
     /* Hide all custom cursors on touch devices */
@@ -9213,14 +9202,59 @@
     cursor: auto !important;
   }
   /* iOS Safari keeps :hover matched after a tap (no mouse ever moves away
-     to clear it), and #nav-pause grows 46px→56px on hover — on a touch
-     device that growth can get stuck engaged, which was very likely
-     contributing to the ring looking detached from the button. Touch
-     never needed the hover-grow anyway, so it's simplest to just pin the
-     size regardless of whatever :hover state Safari thinks is active. */
+     to clear it) — #nav-stack:hover grows several things at once
+     (nav-pause 46→56px, page-nav's width/padding/gap, the dots' own
+     gap, and each dot 7→15px), and on a touch device that whole hover
+     state can get stuck engaged with nothing to trigger it clearing.
+     Earlier this only pinned nav-pause specifically; the rest of the
+     bar was still growing and staying stuck too. Pin everything back
+     to its base (non-hover) size on touch — the hover-grow doesn't
+     serve a purpose there anyway, there's no cursor hovering. */
   body.is-touch #nav-stack:hover #nav-pause {
     width: 46px !important;
     height: 46px !important;
+  }
+  body.is-touch #nav-stack:hover #page-nav {
+    width: auto !important;
+    padding: 14px 10px !important;
+    gap: 14px !important;
+  }
+  body.is-touch #nav-stack:hover #nav-dots-row {
+    gap: 14px !important;
+  }
+  body.is-touch #nav-stack:hover .nav-dot {
+    width: 7px !important;
+    height: 7px !important;
+  }
+  /* Desktop's #card-1 stays "flat" (untouched, was already correct
+     there) — this is specifically for touch (iPad, no hover — the
+     device where the bug actually showed up). "Flat" flattened the
+     nested #card-1-flip's own rotateY, causing both flip faces to
+     render simultaneously (mirrored front bleeding through, plus
+     card-2 visible behind through the gap that left). Scoped here
+     instead of changing the shared base rule for both entities. */
+  body.is-touch #card-1 {
+    transform-style: preserve-3d !important;
+  }
+  /* Desktop's #scroll-indicator (vertical line, "Scroll" label) makes
+     sense for a mouse-wheel deck, but the deck now slides horizontally
+     via swipe on touch (including iPad, which still uses this desktop
+     scene rather than #mobile-scene) — matching mobile's own swipe
+     indicator visual (horizontal line, same growth animation) instead
+     of leaving the vertical scroll cue up on a device with no scroll
+     wheel to reference. Label text itself is changed via JS below,
+     since it's plain text content, not something CSS can rewrite. */
+  body.is-touch #scroll-line-wrap {
+    width: 53px !important;
+    height: 4px !important;
+  }
+  body.is-touch #scroll-line {
+    background: linear-gradient(90deg, #FF6F00 0%, rgba(255,111,0,0) 100%) !important;
+    animation: mSwipeGrow 2.2s ease-in-out infinite !important;
+  }
+  body.is-touch #scroll-label {
+    font-size: 16px !important;
+    letter-spacing: 1.5px !important;
   }
   /* Switched the ring itself from 4-sided inset auto-sizing to explicit
      fixed dimensions + margin-based centering on touch — same technique
@@ -9229,29 +9263,40 @@
      width/height from 4 simultaneous constraints; this removes that
      dependency entirely rather than continuing to guess at why it
      wasn't rendering concentric with the button. #nav-pause is pinned
-     to 46px on touch (rule above), so the ring's fixed 56px (46+5+5)
-     size is exact, not a guess. */
+     to 46px on touch (rule above), box matches 1:1. */
   body.is-touch #np-ring {
     top: 50% !important;
     left: 50% !important;
     right: auto !important;
     bottom: auto !important;
-    width: 56px !important;
-    height: 56px !important;
-    margin-left: -28px !important;
-    margin-top: -28px !important;
+    width: 46px !important;
+    height: 46px !important;
+    margin-left: -23px !important;
+    margin-top: -23px !important;
   }
-  /* The cascade reveal animations (.case-reveal / -number / -img) blur
-     from 10-20px down to 0 while sliding/scaling in — filter:blur()
-     transitioning alongside transform on many elements at once during
-     scroll is a well-documented category of Safari/WebKit compositing
-     bugs (the whitish/colored smears under images and text on iPad and
-     iPhone this was reported with). No universally reliable fix exists
-     for that specific combination, and it can't be verified without a
-     real device — so instead of guessing, the blur is dropped entirely
-     on touch and only the transform (slide + scale) part remains. That
-     alone is a well-supported, artifact-free animation everywhere; the
-     reveal still happens, it just isn't blurred while it does. */
+  /* The stroke itself sits at r=45 out of a 100-unit viewBox — leaves a
+     ~2.5-unit inset from the box edge, which is where the visible gap
+     was actually coming from, not the box size. Pushing the radius out
+     (and thinning the stroke slightly so it doesn't clip past 50) puts
+     the visible ring right at the button's edge instead. */
+  body.is-touch .np-ring-bg,
+  body.is-touch .np-ring-fg {
+    r: 48px;
+  }
+  body.is-touch #np-ring circle {
+    stroke-width: 3px !important;
+  }
+  /* The cascade reveal animations (.case-reveal / -number / -img) kept
+     causing touch-specific trouble in different forms — blur-during-
+     transition compositing artifacts, then a settle-shift from an
+     unrelated gyroscope system, and now visible jank/slowness (dozens
+     of these per popup, all watched by one IntersectionObserver; a fast
+     touch-scroll can cross several elements' visibility threshold in
+     one gesture, firing that many simultaneous transitions at once,
+     which a weaker mobile GPU doesn't keep up with). Rather than
+     patching each symptom individually, touch gets the content
+     instantly instead of animated — final position/opacity, no
+     transition at all. Desktop is untouched. */
   body.is-touch .case-reveal,
   body.is-touch .case-reveal.visible,
   body.is-touch .case-reveal.hidden,
@@ -9262,6 +9307,9 @@
   body.is-touch .case-reveal-img.visible,
   body.is-touch .case-reveal-img.hidden {
     filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
   }
   /* Same reasoning, for the popup's own open/close slide (caseSlideUp
      animates filter:blur(6px)→0, and the closing transform separately
@@ -12167,6 +12215,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   document.body.classList.toggle('is-touch', IS_TOUCH);
   window._isTouch = IS_TOUCH;
+  // Matching the visual swap above — CSS can restyle #scroll-line, but
+  // the "Scroll" text itself is plain content, not something a
+  // stylesheet can rewrite.
+  if (IS_TOUCH) {
+    const scrollLabel = document.getElementById('scroll-label');
+    if (scrollLabel) scrollLabel.textContent = 'Swipe';
+  }
 
   // ── Auto-scale ─────────────────────────
   const CARD_W = 1328, CARD_H = 1066;
@@ -13622,7 +13677,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // in updateGridCamera()'s transform; touch-drag panning divides its
   // delta by the same factor so a finger still tracks 1:1 on screen.
   function gridMobileScale() {
-    return window.innerWidth <= 600 ? 0.325 : 1;
+    return window.innerWidth <= 600 ? 0.52 : 1;
   }
 
   // Flat pre-rendered covers for grid view — swapped in instead of the
@@ -13632,16 +13687,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // carried anyway. ASO has no flat cover yet, so it still falls back to
   // the original cloneNode path below.
   const gridFlatCovers = {
-    'card-3':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View01_1_5x_qehonv.webp',  // 3D Design System
-    'card-4':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View02_1_5x_tbgf0o.webp',  // McLaren
-    'card-5':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813541/Cover-GRID_View03_1_5x_icbh3g.webp',  // Brazil
-    'card-7':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813541/Cover-GRID_View04_1_5x_blqakd.webp',  // Blog Covers
-    'card-6':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View05_1_5x_l3v5nw.webp',  // Presentations
-    'card-12': 'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View06_1_5x_wklduk.webp',  // Affstore
-    'card-9':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View07_1_5x_mem8cq.webp',  // Banners
-    'card-10': 'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813540/Cover-GRID_View08_1_5x_fmgd2f.webp',  // E-Mails
-    'card-11': 'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813541/Cover-GRID_View09_1_5x_klf1u5.webp',  // BORSH
-    'card-2':  'https://res.cloudinary.com/dm2njkzir/image/upload/v1786813541/Cover-GRID_View10_1_5x_nzg9w4.webp',  // IQ Broker
+    'card-3':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View01_1_5x_qehonv.webp',  // 3D Design System
+    'card-4':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View02_1_5x_tbgf0o.webp',  // McLaren
+    'card-5':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813541/Cover-GRID_View03_1_5x_icbh3g.webp',  // Brazil
+    'card-7':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813541/Cover-GRID_View04_1_5x_blqakd.webp',  // Blog Covers
+    'card-6':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View05_1_5x_l3v5nw.webp',  // Presentations
+    'card-12': 'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View06_1_5x_wklduk.webp',  // Affstore
+    'card-9':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View07_1_5x_mem8cq.webp',  // Banners
+    'card-10': 'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813540/Cover-GRID_View08_1_5x_fmgd2f.webp',  // E-Mails
+    'card-11': 'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813541/Cover-GRID_View09_1_5x_klf1u5.webp',  // BORSH
+    'card-2':  'https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786813541/Cover-GRID_View10_1_5x_nzg9w4.webp',  // IQ Broker
   };
 
   let camX = 0, camY = 0; // raw, unwrapped values for drag math
@@ -18344,7 +18399,17 @@ document.addEventListener('DOMContentLoaded', () => {
       requestCarParallax();
       requestAffstoreRef();
       requestAffstoreMb();
-      if (window._scaleCasePages) window._scaleCasePages();
+      // Delayed past caseSlideUp's own 1.2s — compensateCaseHeight()
+      // (inside scaleCasePages) writes a style then immediately reads
+      // offsetHeight, a forced-synchronous-layout pattern. Doing that in
+      // the very first frame after .active is added meant it was
+      // competing with the opening animation's own most critical
+      // frames for main-thread time, right when the animation most
+      // needed to stay on the compositor thread — a likely contributor
+      // to the reported choppy open on iPad.
+      setTimeout(() => {
+        if (window._scaleCasePages) window._scaleCasePages();
+      }, 1300);
       if (pageId === 'case-popup-2-wrap') {
         setTimeout(() => {
           const heroTitle = document.getElementById('case-hero-title');
@@ -18429,6 +18494,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     caseOpenedFrom = 'card';
   }
+
+  // ── Phone-landscape lock — redundant JS check alongside the CSS
+  // media query (@media (orientation:landscape) and (max-height:500px)
+  // toggles #phone-landscape-notice's display). A pure-CSS switch can't
+  // be verified without a real device, so this sets the same outcome
+  // directly via inline styles too — if one path has a gap, the other
+  // still covers it. Also closes any open popup and marks a class other
+  // code can check to skip heavy per-frame work while the notice is up,
+  // on the theory that background work continuing to run under a
+  // hidden UI during rapid rotation events was a plausible contributor
+  // to the reported crashes.
+  function checkPhoneLandscapeLock() {
+    const notice = document.getElementById('phone-landscape-notice');
+    if (!notice) return;
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const isPhoneLandscape = isTouchDevice &&
+      window.matchMedia('(orientation: landscape)').matches &&
+      window.innerHeight <= 500;
+    document.body.classList.toggle('phone-landscape-lock', isPhoneLandscape);
+    notice.style.display = isPhoneLandscape ? 'flex' : 'none';
+    const mc = document.getElementById('main-content');
+    if (mc) mc.style.display = isPhoneLandscape ? 'none' : '';
+    if (isPhoneLandscape && caseOpen) closeCase();
+  }
+  checkPhoneLandscapeLock();
+  window.addEventListener('resize', checkPhoneLandscapeLock);
+  window.addEventListener('orientationchange', checkPhoneLandscapeLock);
 
   // ── Ultra-smooth inertia scroll ────────────────
   // Tuning: SCROLL_GAIN = how much a wheel tick adds (lower = slower),
@@ -18844,7 +18936,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     track.addEventListener('pointermove', (e) => {
       if (!dragging) return;
-      offset = startOffset - (e.clientX - startX);
+      // pointer coordinates are always real screen pixels, but this
+      // track lives inside a popup that's zoomed down on mobile
+      // (zoom: var(--case-scale-mobile,1) — zoom genuinely shrinks the
+      // local coordinate space, unlike desktop's transform:scale which
+      // is purely visual). Using the raw screen-pixel delta as-is made
+      // the carousel track only a fraction of the actual finger
+      // movement — divide by the current zoom to compensate, same fix
+      // already applied to grid-view's touch drag for the same reason.
+      const zoom = parseFloat(getComputedStyle(overlay).getPropertyValue('--case-scale-mobile')) || 1;
+      offset = startOffset - (e.clientX - startX) / zoom;
     });
     function endDrag() {
       if (!dragging) return;
@@ -19113,6 +19214,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const SWIPE_THRESHOLD = 120; // px to trigger close
 
   overlay.addEventListener('touchstart', (e) => {
+    // Reverted — swipe-to-close wasn't working well, back to the X
+    // button as the sole close affordance. touchmove/touchend below key
+    // off swipeActive, which now never becomes true, so they're dead
+    // code paths left in place rather than needing their own edits.
+    return;
     if (!caseOpen || window.innerWidth > 900) return;
     // Only activate once scrolled to the top of the popup content — this
     // is what actually avoids fighting with normal scrolling (a downward
@@ -19182,6 +19288,23 @@ document.addEventListener('DOMContentLoaded', () => {
   let caseObserver = null;
 
   function initScrollReveal() {
+    // Touch gets content instantly via the CSS override (body.is-touch
+    // .case-reveal {...!important...}) — no visible reveal to drive, so
+    // skip creating the observer at all rather than have it keep
+    // toggling classes across dozens of elements on every scroll frame
+    // for no visual payoff. Isolating whether that toggling overhead
+    // itself was contributing to the reported lag, on top of the
+    // transition already being neutralized.
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (isTouchDevice) {
+      if (caseObserver) { caseObserver.disconnect(); caseObserver = null; }
+      overlay.querySelectorAll('.case-reveal, .case-reveal-number, .case-reveal-img').forEach(el => {
+        el.classList.remove('hidden');
+        el.classList.add('visible');
+      });
+      return;
+    }
+
     // Reset all reveals
     overlay.querySelectorAll('.case-reveal, .case-reveal-number, .case-reveal-img').forEach(el => {
       el.classList.remove('visible');
