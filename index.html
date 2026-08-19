@@ -1513,6 +1513,22 @@
   #card-1-flip.flipped {
     transform: perspective(2600px) rotateY(180deg);
   }
+  /* Touch: replacing the rotateY 3D technique with a plain opacity
+     crossfade — confirmed via a real iPad's own matchMedia values
+     (debug panel) that touch detection itself is correct, so this is
+     safe to reintroduce now. backface-visibility unreliably hiding the
+     rotated-away face in this nested 3D + touch-carousel context on
+     iPadOS's WebKit (shared by every iPad browser, Chrome included —
+     Apple requires it) was the root cause of the mirrored-content
+     flash, duplicate-card ghosting, and disappear/reappear bugs. A
+     crossfade has no rotation, no perspective, no backface-visibility
+     dependency — that category of bug can't happen with it. */
+  body.is-touch #card-1-flip,
+  body.is-touch #card-1-flip.flipped {
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
   #card-1-front,
   #card-1-back {
     position: absolute;
@@ -1527,6 +1543,27 @@
     transform: rotateY(180deg);
     background: #000;
     border: 2px solid #1A1A1A;
+  }
+  body.is-touch #card-1-front {
+    -webkit-backface-visibility: visible !important;
+    backface-visibility: visible !important;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  body.is-touch #card-1-back {
+    -webkit-backface-visibility: visible !important;
+    backface-visibility: visible !important;
+    transform: none !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+  body.is-touch #card-1-flip.flipped #card-1-front {
+    opacity: 0;
+    pointer-events: none;
+  }
+  body.is-touch #card-1-flip.flipped #card-1-back {
+    opacity: 1;
+    pointer-events: auto;
   }
   /* Back tags — temporarily hidden while trying the animated background */
   #card-1-back-tags {
@@ -14506,7 +14543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile's flip has always hard-swapped display at the animation's
     // midpoint as a safety net, in case backface-visibility doesn't
     // fully hide the rotated-away face in this nested 3D context —
-    // desktop matches it now too.
+    // desktop matches it now too. Touch skips this (see below).
     const cardFrontEl = document.getElementById('card-1-front');
     const cardBackEl  = document.getElementById('card-1-back');
     let flipMidTimer = null;
@@ -14515,14 +14552,31 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cardBackEl)  cardBackEl.style.display  = showFront ? 'none' : '';
     }
     function doDesktopFlip(nowFlipped) {
+      if (IS_TOUCH) return;
       clearTimeout(flipMidTimer);
       flipMidTimer = setTimeout(() => setDesktopFlipFaces(!nowFlipped), 475);
+    }
+    // Touch crossfade — driven via inline styles rather than the CSS
+    // classes above. Inline styles win over any external stylesheet
+    // rule regardless of specificity or cascade order, removing any
+    // ambiguity about whether the transition property carries through
+    // correctly in real iPadOS WebKit.
+    function doTouchCrossfade(showBack) {
+      if (!cardFrontEl || !cardBackEl) return;
+      cardFrontEl.style.transition = 'opacity 0.5s ease';
+      cardBackEl.style.transition  = 'opacity 0.5s ease';
+      cardFrontEl.style.opacity = showBack ? '0' : '1';
+      cardBackEl.style.opacity  = showBack ? '1' : '0';
+      cardFrontEl.style.pointerEvents = showBack ? 'none' : 'auto';
+      cardBackEl.style.pointerEvents  = showBack ? 'auto' : 'none';
     }
     flipBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       cardFlip.classList.toggle('flipped');
       doSweep();
-      doDesktopFlip(cardFlip.classList.contains('flipped'));
+      const nowFlipped = cardFlip.classList.contains('flipped');
+      doDesktopFlip(nowFlipped);
+      if (IS_TOUCH) doTouchCrossfade(nowFlipped);
     });
     const cardBack = document.getElementById('card-1-back');
     if (cardBack) {
@@ -14532,6 +14586,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cardFlip.classList.remove('flipped');
         doSweep();
         doDesktopFlip(false);
+        if (IS_TOUCH) doTouchCrossfade(false);
       });
     }
     // The whole front face flips too — but leave the real links alone.
@@ -14544,6 +14599,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cardFlip.classList.add('flipped');
         doSweep();
         doDesktopFlip(true);
+        if (IS_TOUCH) doTouchCrossfade(true);
       });
     }
     cardFlip.addEventListener('animationend', (e) => {
