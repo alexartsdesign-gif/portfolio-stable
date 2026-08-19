@@ -7992,7 +7992,8 @@
       left: 50% !important;
       right: auto !important;
       transform: translateX(-50%);
-      width: 380px;
+      width: 560px;
+      text-align: center;
     }
     #case-hero-subtitle {
       top: 274px !important;
@@ -9278,21 +9279,15 @@
     cursor: auto !important;
   }
   /* Desktop's #card-1 stays "flat" (untouched, was already correct
-     there) — this is specifically for touch (iPad, no hover — the
-     device where the bug actually showed up). "Flat" flattened the
-     nested #card-1-flip's own rotateY, causing both flip faces to
-     render simultaneously (mirrored front bleeding through, plus
-     card-2 visible behind through the gap that left). Scoped here
-     instead of changing the shared base rule for both entities.
-     Also adding perspective here as its own property (mobile's own
-     #m-card-1 has this; desktop instead embeds perspective() inline
-     within #card-1-flip's own transform — a real, if subtle,
-     difference from mobile's proven recipe). */
-  body.is-touch #card-1 {
-    transform-style: preserve-3d !important;
-    perspective: 2600px !important;
-    -webkit-perspective: 2600px !important;
-  }
+     there). This used to also add perspective/preserve-3d here for
+     touch, needed by the old rotateY-based flip technique — now that
+     the flip uses a pure opacity crossfade (no 3D rotation involved at
+     all), #card-1 doesn't need its own 3D rendering context for that
+     purpose anymore. Removed it: keeping it would have needlessly
+     wrapped card-1's own separate translateX carousel-exit animation
+     in an active 3D context it doesn't need, which is a plausible
+     explanation for card-1 specifically (and only card-1) showing a
+     disappear/reappear glitch that no other card in the carousel had. */
   /* Desktop's #scroll-indicator (vertical line, "Scroll" label) makes
      sense for a mouse-wheel deck, but the deck now slides horizontally
      via swipe on touch (including iPad, which still uses this desktop
@@ -9342,6 +9337,18 @@
   }
   body.is-touch #np-ring circle {
     stroke-width: 3px !important;
+  }
+  /* Affstore's popup background decoration (#case-09-bg-decor) is a
+     single inline SVG with 63 separate <path> elements, each with its
+     own unique radial gradient — ~26KB of markup, purely decorative
+     (already pointer-events:none). Rendering 63 live radial gradients
+     simultaneously right as the popup opens is a real GPU cost, and
+     very likely the specific cause of this one case opening at 5fps on
+     iPad while every other popup (without anything this heavy) opens
+     fine. No other popup has a background decoration this complex, so
+     this is scoped to just this element rather than a general rule. */
+  body.is-touch #case-09-bg-decor {
+    display: none !important;
   }
   /* The cascade reveal animations (.case-reveal / -number / -img) kept
      causing touch-specific trouble in different forms — blur-during-
@@ -10245,9 +10252,9 @@
 </defs>
 </svg>
 
-        <img id="card-12-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-257px; top:631px; width:1842px; height:95px; pointer-events:none; z-index:2;">
-        <img id="card-12-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:116px; top:336px; width:1096px; height:617px; pointer-events:none; z-index:3;">
-        <img id="card-12-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-257px; top:650px; width:1842px; height:95px; pointer-events:none; z-index:4;">
+        <img id="card-12-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-257px; top:631px; width:1842px; height:95px; pointer-events:none; z-index:2;">
+        <img id="card-12-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:116px; top:336px; width:1096px; height:617px; pointer-events:none; z-index:3;">
+        <img id="card-12-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-257px; top:650px; width:1842px; height:95px; pointer-events:none; z-index:4;">
       </div>
       <div id="card-12-tags">
         <div class="tag-lime-primary">Brand Support</div>
@@ -12003,9 +12010,9 @@
 </defs>
 </svg>
 
-        <img id="m-card4-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-454.5px; top:843px; width:1561px; height:81px; pointer-events:none; z-index:2;">
-        <img id="m-card4-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:-225px; top:405px; width:1102px; height:620px; pointer-events:none; z-index:3;">
-        <img id="m-card4-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-454.5px; top:668px; width:1561px; height:81px; pointer-events:none; z-index:4;">
+        <img id="m-card4-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-454.5px; top:843px; width:1561px; height:81px; pointer-events:none; z-index:2;">
+        <img id="m-card4-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:-225px; top:405px; width:1102px; height:620px; pointer-events:none; z-index:3;">
+        <img id="m-card4-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-454.5px; top:668px; width:1561px; height:81px; pointer-events:none; z-index:4;">
       </div>
       <div id="m-card4-c-tags">
         <div class="tag-lime-primary">Brand Support</div>
@@ -12272,30 +12279,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const IS_TOUCH = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   document.body.classList.toggle('is-touch', IS_TOUCH);
   window._isTouch = IS_TOUCH;
-  // Temporary diagnostic overlay — shows on EVERY visit right now (no
-  // URL parameter needed), so it can't be missed. Screenshot it and
-  // send it over — that replaces guessing with actual data from the
-  // real device. Remove this whole block once the touch-detection
-  // question is settled either way.
-  (function() {
-    const dbg = document.createElement('div');
-    dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0000;color:#fff;font:13px monospace;padding:14px;z-index:2147483647;white-space:pre-wrap;border-bottom:4px solid #fff;';
-    const mqHoverNone = window.matchMedia('(hover: none)').matches;
-    const mqPointerCoarse = window.matchMedia('(pointer: coarse)').matches;
-    const mqHoverHover = window.matchMedia('(hover: hover)').matches;
-    const mqPointerFine = window.matchMedia('(pointer: fine)').matches;
-    dbg.textContent =
-      'DEBUG PANEL\n' +
-      'hover:none = ' + mqHoverNone + '\n' +
-      'pointer:coarse = ' + mqPointerCoarse + '\n' +
-      'hover:hover = ' + mqHoverHover + '\n' +
-      'pointer:fine = ' + mqPointerFine + '\n' +
-      'IS_TOUCH (combined) = ' + IS_TOUCH + '\n' +
-      'navigator.maxTouchPoints = ' + navigator.maxTouchPoints + '\n' +
-      'innerWidth x innerHeight = ' + window.innerWidth + ' x ' + window.innerHeight + '\n' +
-      'userAgent = ' + navigator.userAgent;
-    document.body.appendChild(dbg);
-  })();
   // Matching the visual swap above — CSS can restyle #scroll-line, but
   // the "Scroll" text itself is plain content, not something a
   // stylesheet can rewrite.
@@ -17601,9 +17584,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </defs>
 </svg>
 
-        <img id="case-09-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-257px; top:631px; width:1842px; height:95px; pointer-events:none; z-index:2;">
-        <img id="case-09-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:116px; top:336px; width:1096px; height:617px; pointer-events:none; z-index:3;">
-        <img id="case-09-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-257px; top:650px; width:1842px; height:95px; pointer-events:none; z-index:4;">
+        <img id="case-09-ribbon-back" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_Back_1_5x_t5shli.webp" alt="" style="position:absolute; left:-257px; top:631px; width:1842px; height:95px; pointer-events:none; z-index:2;">
+        <img id="case-09-chain" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Chain_1_5x_bnpg4c.webp" alt="" style="position:absolute; left:116px; top:336px; width:1096px; height:617px; pointer-events:none; z-index:3;">
+        <img id="case-09-ribbon-front" src="https://res.cloudinary.com/dm2njkzir/image/upload/w_1200,q_auto,f_auto/v1786401493/Ribbon_FRONT_1_5x_tsnwv6.webp" alt="" style="position:absolute; left:-257px; top:650px; width:1842px; height:95px; pointer-events:none; z-index:4;">
       </div>
       <div id="case-09-c-tags">
         <div class="tag-lime-primary">Brand Support</div>
