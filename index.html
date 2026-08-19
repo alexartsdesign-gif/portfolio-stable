@@ -9242,56 +9242,25 @@
   body.is-touch * {
     cursor: auto !important;
   }
-  /* iOS Safari keeps :hover matched after a tap (no mouse ever moves
-     away to clear it) — #nav-stack:hover grows several things at once,
-     and on touch that whole hover state could get stuck engaged with
-     nothing to trigger it clearing.
-     Two earlier attempts here: first just pinned everything to base
-     size (killed the grow-on-tap feedback entirely). Second drove
-     growth off a JS-toggled .touch-grown class at a smaller size than
-     desktop's — but its hover-pin rule and its touch-grown rule had
-     EQUAL CSS specificity, so which one won was decided by source
-     order, not by which state was actually true; whenever stuck :hover
-     and .touch-grown were both matching at once, that tie could read
-     as a flash/collapse between the two sizes ("hugging").
-     This version: uses desktop's exact grow values (not a scaled-down
-     amount, per direct request) via .touch-grown, and makes the
-     hover-pin rule explicitly :not(.touch-grown) so the two are
-     mutually exclusive by construction — no specificity tie is
-     possible, regardless of what stuck :hover state Safari thinks is
-     active. JS (further down, near the other touch-specific script)
-     adds .touch-grown on tap and removes it 1s after the last tap. */
-  body.is-touch #nav-stack:hover:not(.touch-grown) #nav-pause {
+  /* No scaling on touch at all, by direct request — the nav bar and
+     play/pause button stay at base size unconditionally. Simpler and
+     more reliable than chasing iOS Safari's stuck-:hover behavior with
+     conditional CSS states. */
+  body.is-touch #nav-stack #nav-pause {
     width: 46px !important;
     height: 46px !important;
   }
-  body.is-touch #nav-stack:hover:not(.touch-grown) #page-nav {
+  body.is-touch #nav-stack #page-nav {
     width: auto !important;
     padding: 14px 10px !important;
     gap: 14px !important;
   }
-  body.is-touch #nav-stack:hover:not(.touch-grown) #nav-dots-row {
+  body.is-touch #nav-stack #nav-dots-row {
     gap: 14px !important;
   }
-  body.is-touch #nav-stack:hover:not(.touch-grown) .nav-dot {
+  body.is-touch #nav-stack .nav-dot {
     width: 7px !important;
     height: 7px !important;
-  }
-  body.is-touch #nav-stack.touch-grown #nav-pause {
-    width: 56px !important;
-    height: 56px !important;
-  }
-  body.is-touch #nav-stack.touch-grown #page-nav {
-    width: 56px !important;
-    padding: 22px 0 !important;
-    gap: 22px !important;
-  }
-  body.is-touch #nav-stack.touch-grown #nav-dots-row {
-    gap: 22px !important;
-  }
-  body.is-touch #nav-stack.touch-grown .nav-dot {
-    width: 15px !important;
-    height: 15px !important;
   }
   /* Desktop's #card-1 stays "flat" (untouched, was already correct
      there) — this is specifically for touch (iPad, no hover — the
@@ -12294,24 +12263,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (IS_TOUCH) {
     const scrollLabel = document.getElementById('scroll-label');
     if (scrollLabel) scrollLabel.textContent = 'Swipe';
-  }
-  // Replaces :hover-driven grow for the nav bar on touch — :hover
-  // sticking after a tap (nothing to un-hover with) was why it used to
-  // get stuck engaged, so this drives the grow off a plain JS-toggled
-  // class instead, shrinking back down 1s after the last tap regardless
-  // of whatever :hover state Safari thinks is active.
-  if (IS_TOUCH) {
-    const navStackEl = document.getElementById('nav-stack');
-    let navGrowTimer = null;
-    if (navStackEl) {
-      navStackEl.addEventListener('touchstart', () => {
-        navStackEl.classList.add('touch-grown');
-        clearTimeout(navGrowTimer);
-        navGrowTimer = setTimeout(() => {
-          navStackEl.classList.remove('touch-grown');
-        }, 1000);
-      }, { passive: true });
-    }
   }
 
   // ── Auto-scale ─────────────────────────
