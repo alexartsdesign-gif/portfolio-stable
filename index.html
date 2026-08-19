@@ -9245,43 +9245,53 @@
   /* iOS Safari keeps :hover matched after a tap (no mouse ever moves
      away to clear it) — #nav-stack:hover grows several things at once,
      and on touch that whole hover state could get stuck engaged with
-     nothing to trigger it clearing. First attempt just pinned
-     everything back to base size on touch, killing the grow-on-tap
-     feedback entirely — overcorrected. This keeps the same visual idea
-     (bar grows when you interact with it) but drives it off a JS-
-     toggled class instead of :hover, with a milder growth amount than
-     desktop's, and a 1s-after-last-tap timer to shrink it back down
-     (JS setup is further down, near the other touch-specific script). */
-  body.is-touch #nav-stack:hover #nav-pause {
+     nothing to trigger it clearing.
+     Two earlier attempts here: first just pinned everything to base
+     size (killed the grow-on-tap feedback entirely). Second drove
+     growth off a JS-toggled .touch-grown class at a smaller size than
+     desktop's — but its hover-pin rule and its touch-grown rule had
+     EQUAL CSS specificity, so which one won was decided by source
+     order, not by which state was actually true; whenever stuck :hover
+     and .touch-grown were both matching at once, that tie could read
+     as a flash/collapse between the two sizes ("hugging").
+     This version: uses desktop's exact grow values (not a scaled-down
+     amount, per direct request) via .touch-grown, and makes the
+     hover-pin rule explicitly :not(.touch-grown) so the two are
+     mutually exclusive by construction — no specificity tie is
+     possible, regardless of what stuck :hover state Safari thinks is
+     active. JS (further down, near the other touch-specific script)
+     adds .touch-grown on tap and removes it 1s after the last tap. */
+  body.is-touch #nav-stack:hover:not(.touch-grown) #nav-pause {
     width: 46px !important;
     height: 46px !important;
   }
-  body.is-touch #nav-stack:hover #page-nav {
+  body.is-touch #nav-stack:hover:not(.touch-grown) #page-nav {
     width: auto !important;
     padding: 14px 10px !important;
     gap: 14px !important;
   }
-  body.is-touch #nav-stack:hover #nav-dots-row {
+  body.is-touch #nav-stack:hover:not(.touch-grown) #nav-dots-row {
     gap: 14px !important;
   }
-  body.is-touch #nav-stack:hover .nav-dot {
+  body.is-touch #nav-stack:hover:not(.touch-grown) .nav-dot {
     width: 7px !important;
     height: 7px !important;
   }
   body.is-touch #nav-stack.touch-grown #nav-pause {
-    width: 51px !important;
-    height: 51px !important;
+    width: 56px !important;
+    height: 56px !important;
   }
   body.is-touch #nav-stack.touch-grown #page-nav {
-    padding: 18px 6px !important;
-    gap: 18px !important;
+    width: 56px !important;
+    padding: 22px 0 !important;
+    gap: 22px !important;
   }
   body.is-touch #nav-stack.touch-grown #nav-dots-row {
-    gap: 18px !important;
+    gap: 22px !important;
   }
   body.is-touch #nav-stack.touch-grown .nav-dot {
-    width: 11px !important;
-    height: 11px !important;
+    width: 15px !important;
+    height: 15px !important;
   }
   /* Desktop's #card-1 stays "flat" (untouched, was already correct
      there) — this is specifically for touch (iPad, no hover — the
@@ -13335,18 +13345,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyState() {
     cards[0].style.zIndex    = '2';
-    cards[0].style.transform = FRONT;
+    cards[0].style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
     cards[0].style.opacity   = '1';
     cards[0].classList.add('is-front');
     cards[0].classList.remove('is-back');
     cards[1].style.zIndex    = '1';
-    cards[1].style.transform = BACK;
-    cards[1].style.opacity   = '1';
+    cards[1].style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+    cards[1].style.opacity   = IS_TOUCH ? '0' : '1';
     cards[1].classList.add('is-back');
     cards[1].classList.remove('is-front');
     for (let i = 2; i < cards.length; i++) {
       cards[i].style.zIndex    = '0';
-      cards[i].style.transform = HIDDEN;
+      cards[i].style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
       cards[i].style.opacity   = '0';
     }
     applyFarHidden();
@@ -13672,13 +13682,13 @@ document.addEventListener('DOMContentLoaded', () => {
     card.classList.add('no-transition');
     card.classList.remove('is-front', 'is-back', 'animating', 'card-far');
     card.style.zIndex    = '1';
-    card.style.transform = BACK;
-    card.style.opacity   = '1';
+    card.style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+    card.style.opacity   = IS_TOUCH ? '0' : '1';
 
     others.forEach((c, i) => {
       c.classList.add('no-transition');
       c.style.zIndex    = '0';
-      c.style.transform = HIDDEN;
+      c.style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
       c.style.opacity   = '0';
     });
 
@@ -14390,8 +14400,8 @@ document.addEventListener('DOMContentLoaded', () => {
       targetCard.classList.add('no-transition');
       targetCard.classList.remove('card-far');
       targetCard.style.zIndex = '2';
-      targetCard.style.transform = BACK;
-      targetCard.style.opacity = '1';
+      targetCard.style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+      targetCard.style.opacity = IS_TOUCH ? '0' : '1';
       targetCard.classList.remove('is-back', 'is-front');
 
       // Hide all others except current front
@@ -14399,7 +14409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (c !== currentFront && c !== targetCard) {
           c.classList.add('no-transition');
           c.style.zIndex = '0';
-          c.style.transform = HIDDEN;
+          c.style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
           c.style.opacity = '0';
           c.classList.remove('is-back', 'is-front');
         }
@@ -14425,11 +14435,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFront.classList.add('animating');
 
         targetCard.style.zIndex = '3';
-        targetCard.style.transform = FRONT;
+        targetCard.style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
         targetCard.classList.add('is-front');
 
         currentFront.style.zIndex = '0';
-        currentFront.style.transform = HIDDEN;
+        currentFront.style.transform = IS_TOUCH ? TOUCH_LEFT : HIDDEN;
         currentFront.style.opacity = '0';
         currentFront.classList.remove('is-front');
 
@@ -14461,22 +14471,22 @@ document.addEventListener('DOMContentLoaded', () => {
           // Apply correct visual states
           cards.forEach(c => c.classList.remove('no-transition'));
           cards[0].style.zIndex = '2';
-          cards[0].style.transform = FRONT;
+          cards[0].style.transform = IS_TOUCH ? TOUCH_CENTER : FRONT;
           cards[0].style.opacity = '1';
           cards[0].classList.add('is-front');
           cards[0].classList.remove('is-back');
           if (cards[1]) {
             cards[1].classList.add('no-transition');
             cards[1].style.zIndex = '1';
-            cards[1].style.transform = BACK;
-            cards[1].style.opacity = '1';
+            cards[1].style.transform = IS_TOUCH ? TOUCH_RIGHT : BACK;
+            cards[1].style.opacity = IS_TOUCH ? '0' : '1';
             cards[1].classList.add('is-back');
             cards[1].classList.remove('is-front');
             requestAnimationFrame(() => cards[1].classList.remove('no-transition'));
           }
           for (let i = 2; i < cards.length; i++) {
             cards[i].style.zIndex = '0';
-            cards[i].style.transform = HIDDEN;
+            cards[i].style.transform = IS_TOUCH ? TOUCH_RIGHT : HIDDEN;
             cards[i].style.opacity = '0';
             cards[i].classList.remove('is-back', 'is-front');
           }
