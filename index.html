@@ -1513,6 +1513,22 @@
   #card-1-flip.flipped {
     transform: perspective(2600px) rotateY(180deg);
   }
+  /* Touch-specific: matches mobile's #m-card1-flip recipe exactly —
+     no will-change (mobile's own comment already flagged this as
+     something that "can force a compositing layer that flattens
+     nested 3D in some engines"), -webkit- prefix added, and
+     perspective moved OFF this element's own transform (now on the
+     parent #card-1 instead, added above) since embedding perspective()
+     inline is a different technique than mobile's separate-property
+     approach. */
+  body.is-touch #card-1-flip {
+    will-change: auto !important;
+    -webkit-transform-style: preserve-3d !important;
+    transform: rotateY(0deg) !important;
+  }
+  body.is-touch #card-1-flip.flipped {
+    transform: rotateY(180deg) !important;
+  }
   #card-1-front,
   #card-1-back {
     position: absolute;
@@ -9273,9 +9289,15 @@
      nested #card-1-flip's own rotateY, causing both flip faces to
      render simultaneously (mirrored front bleeding through, plus
      card-2 visible behind through the gap that left). Scoped here
-     instead of changing the shared base rule for both entities. */
+     instead of changing the shared base rule for both entities.
+     Also adding perspective here as its own property (mobile's own
+     #m-card-1 has this; desktop instead embeds perspective() inline
+     within #card-1-flip's own transform — a real, if subtle,
+     difference from mobile's proven recipe). */
   body.is-touch #card-1 {
     transform-style: preserve-3d !important;
+    perspective: 2600px !important;
+    -webkit-perspective: 2600px !important;
   }
   /* Desktop's #scroll-indicator (vertical line, "Scroll" label) makes
      sense for a mouse-wheel deck, but the deck now slides horizontally
@@ -12628,13 +12650,17 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', '1');
       return;
     }
-    // Popups were reading small across the board on real phones — this
-    // boosts every one of them uniformly beyond the exact viewport-fit
-    // calculation below. #case-overlay centers its content and clips
-    // horizontal overflow, so going wider than the viewport stays
-    // centered — the extra width is trimmed equally off both sides
-    // rather than pushing the popup off-center.
-    const MOBILE_SCALE_BOOST = 1.18;
+    // Every popup's own mobile padding is uniform on all four sides
+    // (e.g. McLaren's #case-popup-4 { padding: 28px; }) — the exact-fit
+    // calculation below already renders that as equal top/left/right
+    // margins, since nothing gets clipped without a boost. A boost was
+    // tried here to compensate for content (specifically one shared
+    // carousel component with an unfixed 1440px width) reading small —
+    // but #case-overlay only clips horizontal overflow, not vertical,
+    // so boosting-then-clipping shrank the SIDE margins relative to the
+    // top one, which is the more visible problem. Back to exact fit;
+    // the carousel-width issue needs its own fix, not a global scale
+    // workaround that trades one problem for a different one.
     const padding = 0;
     let s;
     if (vw >= CASE_W_MOBILE + padding * 2) {
@@ -12642,7 +12668,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       s = (vw - padding * 2) / CASE_W_MOBILE;
     }
-    document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', (s * MOBILE_SCALE_BOOST).toString());
+    document.getElementById('case-overlay').style.setProperty('--case-scale-mobile', s.toString());
   }
   scaleCasePagesMobile();
   window.addEventListener('resize', scaleCasePagesMobile);
